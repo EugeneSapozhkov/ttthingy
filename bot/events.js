@@ -11,26 +11,22 @@ const sheet = require('../server/controllers/spreadsheets');
 const main = require('../server/controllers/main');
 
 function reconnect(bot) {
-    return function () {
-        console.log('** The RTM api just closed, reopening');
-        // reconnect after closing
-        bot.startRTM(function (err) {
-            if (err) {
-                console.log('Error connecting bot to Slack:', err);
-            } else {
-                bot.api.im.open({user: 'U7BSKA3AN'}, (err, res) => {
-                    bot.send({
-                        channel: res.channel.id,
-                        user: 'U7BSKA3AN',
-                        text: 'Master, I was closed and restarted',
-                    }, (err) => err && console.log(err));
-                });
-            }
-        });
-    }
+    console.log('** The RTM api just closed, reopening');
+    // reconnect after closing
+    bot.startRTM(function (err) {
+        if (err) {
+            console.log('Error connecting bot to Slack:', err);
+        } else {
+            console.log('RESTARTED');
+        }
+    });
 }
 
 async function listen(controller) {
+    // U7BSKA3AN NIK
+    // U9PGXKCE8 TANYA
+
+    let isStarted = false;
     const bot = controller.spawn({
         token: process.env.TOKEN,
         retry: true
@@ -43,7 +39,7 @@ async function listen(controller) {
             'token': process.env.TOKEN
         });
     }
-    bot.startRTM(function (err) {
+    bot.startRTM((err) => {
         if (err) {
             console.log('Error connecting bot to Slack:', err);
         }
@@ -51,6 +47,9 @@ async function listen(controller) {
 
     controller.on('rtm_open', async (bot) => {
         console.log('** The RTM api just opened');
+        if (isStarted) {
+            return;
+        }
         try {
             await bot.api.im.open({user: 'U7BSKA3AN'}, (err, res) => {
                 bot.send({
@@ -61,16 +60,24 @@ async function listen(controller) {
                     text: 'Запустился',
                 }, (err) => err && console.log(err));
             });
+            isStarted = true;
+            const users = await new Promise((resolve, reject) => {
+                controller.storage.users.all((err, res) => {
+                    err ? reject(err) : resolve(res);
+                });
+            });
+            for (let user of users) {
+                cronjobs.createCustomCronJob('0 17 * * 1-5', function() {
+                    messages.ask(bot, user.id);
+                });
+            }
             // carefully, Cinderella, after midnight your app will turn into the pumpkin
-            cronjobs.createCustomCronJob('0 23 * * 1-5', bot.destroy.bind(bot));
-            // U7BSKA3AN NIK
-            // U9PGXKCE8 TANYA
         } catch (e) {
             console.error(e);
         }
     });
 
-    controller.on('rtm_close', reconnect(bot));
+    controller.on('rtm_close', () => reconnect(bot));
 
     controller.hears(['calculate', 'schedule', 'log'], 'direct_message', (bot, message) => messages.ask(bot, message.user));
 
