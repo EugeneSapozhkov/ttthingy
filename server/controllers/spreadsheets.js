@@ -185,13 +185,11 @@ const setNewValues = async function(sheetName, row) {
     const { data: { values } } = await RowHandler.valuesCall('get', { range: `${sheetName}!A2:Z1000` });
     let currentRange;
     for (let i = 0; i < values.length; i++) {
-        console.log(values[i], row[0], row[1]);
         if (values[i][0] === row[0] && values[i][1] === row[1]) {
             currentRange = i+2;
             break;
         }
     }
-    console.log(currentRange);
     return RowHandler.valuesCall('update', {
         range: `${sheetName}!A${currentRange}:Z${currentRange}`,
         valueInputOption: 'USER_ENTERED',
@@ -287,7 +285,7 @@ const updateRowSpreadsheet = async function (data, id) {
             }
             values.push(String(value));
         });
-        await setNewValues(current.title, values);
+        const SheetResp = await setNewValues(current.title, values);
         // console.log('res', SheetResp);
         return SheetResp.updatedCells;
     } catch (e) {
