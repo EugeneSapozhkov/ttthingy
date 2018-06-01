@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const {promisify} = require('util');
-const User = require('mongoose').model('User');
+const Token = require('mongoose').model('Token');
 const OAuth = require('oauth').OAuth;
 
 async function consumer() {
@@ -20,11 +20,11 @@ async function consumer() {
     );
 }
 
-function user(email) {
-    return User.findOne({email});
+function token(id) {
+    return Token.findOne({id});
 }
 
 module.exports = {
     consumer,
-    user,
+    token,
 };

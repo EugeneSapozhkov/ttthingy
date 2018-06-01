@@ -1,36 +1,37 @@
 'use strict';
 
-const User = require('mongoose').model('User');
+const Token = require('mongoose').model('Token');
 const options = require('../services/jira/options');
 const { get, post } = require('../services/jira/requests');
 const JiraLinks = require('../providers/JiraLinks');
 const JiraLabels = require('../providers/JiraLabels');
 
-async function getData(email) {
+async function getData(id) {
     try {
-        if (!email) {
-            throw new Error('email required');
+        if (!id) {
+            throw new Error('id required');
         }
-        const user = await options.user(email);
+        const token = await options.token(id);
 
-        const boards = await get(user, JiraLinks.boards('Odessa Team'));
+        const boards = await get(token, JiraLinks.boards('Odessa Team'));
 
         const ids = boards.values.map(b => b.id);
         const sprints = await Promise.all(
             ids.reduce((promises, id) => {
-                promises.push(get(user, JiraLinks.sprints(id)));
+                promises.push(get(token, JiraLinks.sprints(id)));
                 return promises;
             }, [])
         );
 
         const sprintsNames = sprints
-            .map(item => item.values.map(spt => spt.name))
+            .map(item => item.values.map(spt => `'${spt.name}'`))
             .reduce((flat, item) => flat.concat(item), [])
             .join(',');
 
-        const { name } = await get(user, JiraLinks.username());
-        const response = await post(user, JiraLinks.issues(), {
-            jql: JiraLinks.issuesJQL(name, JiraLabels[name], sprintsNames),
+        const { name } = await get(token, JiraLinks.username());
+        const jql =  JiraLinks.issuesJQL(name, JiraLabels[name], sprintsNames);
+        const response = await post(token, JiraLinks.issues(), {
+            jql,
             fields: ['summary', 'project', 'issuekey'],
         });
         const issues = response.issues
