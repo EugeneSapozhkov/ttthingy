@@ -3,8 +3,10 @@
 const fs = require('fs');
 const mongoose = require('mongoose');
 const Token = mongoose.model('Token');
+const User = mongoose.model('User');
 const {promisify} = require('util');
 const OAuth = require('oauth').OAuth;
+const sheet = require('../../controllers/spreadsheets');
 
 function tokenRequestHandler (oa) {
     return new Promise((resolve, reject) => {
@@ -89,7 +91,11 @@ async function authCallback (req, res) {
             id,
             jiraTokens: tokenData,
         });
-        res.send('All done, you`re great <3');
+        const user = await User.findOne({
+            id: id,
+        });
+        await sheet.setNewUserEmptyData(user.real_name);
+        res.json(user);
     } catch (e) {
         console.error('authenticate callback error', e);
         return res.send(e.toString());

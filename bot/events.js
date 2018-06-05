@@ -23,71 +23,73 @@ function reconnect(bot) {
 }
 
 async function listen(controller) {
-    // U7BSKA3AN NIK
-    // U9PGXKCE8 TANYA
+    try {
+        // U7CCHAUJE NIK
 
-    let isStarted = false;
-    const bot = controller.spawn({
-        token: process.env.TOKEN,
-        retry: true
-    });
-    const team = await botPromisify(controller.storage.teams.get, 'T0831CCKU');
-    if (!team) {
-        await botPromisify(controller.storage.teams.save, {
-            'id': 'T0831CCKU',
-            'domain': 'dagbladetua',
-            'token': process.env.TOKEN
+        let isStarted = false;
+        const bot = controller.spawn({
+            token: process.env.TOKEN,
+            retry: true
         });
-    }
-    bot.startRTM((err) => {
-        if (err) {
-            console.log('Error connecting bot to Slack:', err);
-        }
-    });
-
-    controller.on('rtm_open', async (bot) => {
-        console.log('** The RTM api just opened');
-        if (isStarted) {
-            return;
-        }
-        try {
-            await bot.api.im.open({user: 'U7BSKA3AN'}, (err, res) => {
-                bot.send({
-                    channel: res.channel.id,
-                    user: {
-                        id: 'U7BSKA3AN'
-                    },
-                    text: 'Запустился',
-                }, (err) => err && console.log(err));
-            });
-            isStarted = true;
-            const users = await new Promise((resolve, reject) => {
-                controller.storage.users.all((err, res) => {
-                    err ? reject(err) : resolve(res);
-                });
-            });
-            for (let user of users) {
-                cronjobs.createCustomCronJob('0 17 * * 1-5', function() {
-                    messages.ask(bot, user.id);
-                });
+        bot.startRTM(async (err) => {
+            if (err) {
+                console.log('Error connecting bot to Slack:', err);
             }
-            // carefully, Cinderella, after midnight your app will turn into the pumpkin
-        } catch (e) {
-            console.error(e);
-        }
-    });
+        });
 
-    controller.on('rtm_close', () => reconnect(bot));
+        controller.on('rtm_open', async (bot) => {
+            console.log('** The RTM api just opened');
+            if (isStarted) {
+                return;
+            }
+            try {
+                const teams = await new Promise((resolve, reject) => {
+                    controller.storage.teams.all((err, res) => {
+                        err ? reject(err) : resolve(res);
+                    });
+                });
+                if (!teams.length) {
+                    const { team } = await new Promise((resolve, reject) => {
+                        bot.api.team.info({}, (err, res) => {
+                            err ? reject(err) : resolve(res);
+                        });
+                    });
+                    await botPromisify(controller.storage.teams.save, Object.assign({}, team, {token: process.env.TOKEN}));
+                }
+                const users = await new Promise((resolve, reject) => {
+                    controller.storage.users.all((err, res) => {
+                        err ? reject(err) : resolve(res);
+                    });
+                });
+                await sheet.tryCreateNewSpreadSheet(users);
+                for (let user of users) {
+                    cronjobs.createCustomCronJob('0 17 * * 1-5', function () {
+                        messages.ask(bot, user.id);
+                    });
+                }
+                isStarted = true;
+                console.log('Started');
+                // carefully, Cinderella, after midnight your app will turn into the pumpkin
+            } catch (e) {
+                console.error(e);
+            }
+        });
 
-    controller.hears(['calculate', 'schedule', 'log'], 'direct_message', (bot, message) => messages.ask(bot, message.user));
+        controller.on('rtm_close', () => reconnect(bot));
 
-    controller.hears(['Meeting', "MAT", "LL", "Other"], 'direct_message', messages.handleAnswer);
+        controller.hears(['calculate', 'schedule', 'log'], 'direct_message', (bot, message) => messages.ask(bot, message, controller));
 
-    controller.hears(['^start'], 'direct_message', (bot, message) => messages.onStart(bot, message, controller));
+        controller.hears(['Meeting', "MAT", "LL", "Other"], 'direct_message', messages.handleAnswer);
 
-    controller.on(['direct_message', 'mention', 'direct_mention'], (bot, message) => messages.onDirectMessage(bot, message, controller));
+        controller.hears(['^start'], 'direct_message', (bot, message) => messages.onStart(bot, message, controller));
 
-    controller.on('interactive_message_callback', messages.interactiveMessageCb);
+        controller.on(['direct_message', 'mention', 'direct_mention'], (bot, message) => messages.onDirectMessage(bot, message, controller));
+
+        controller.on('interactive_message_callback', messages.interactiveMessageCb);
+    } catch (e) {
+        console.log(e);
+        process.exit(1);
+    }
 }
 
 module.exports = {

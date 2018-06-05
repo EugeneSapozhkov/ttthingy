@@ -70,7 +70,7 @@ async function setNewCurrentSheet(name, users) {
             const values = [];
             let rowsCount = 0;
             utils.getWorkingDaysArray().forEach(day => {
-                values.push([day, user.real_name || 'unknown']);
+                values.push([day, user.real_name || user.name || user._id]);
                 rowsCount++;
             });
             data.push({
@@ -89,7 +89,7 @@ async function setNewCurrentSheet(name, users) {
         await RowHandler.call('batchUpdate', {
             resource: {
                 requests: [
-                    {
+                {
                     'addBanding': {
                         'bandedRange': {
                             'bandedRangeId': 1,
@@ -144,34 +144,33 @@ async function setNewCurrentSheet(name, users) {
                         },
                     },
                 }, {
-                        'addBanding': {
-                            'bandedRange': {
-                                'bandedRangeId': 3,
-                                'range': {
-                                    'sheetId': sheet.properties.sheetId,
-                                    'startRowIndex': 1,
-                                    'endRowIndex': sheet.properties.gridProperties.rowCount,
-                                    'startColumnIndex': 3,
-                                    'endColumnIndex': sheet.properties.gridProperties.columnCount,
-                                },
-                                columnProperties: {
-                                    'firstBandColor': {
-                                        'red': 0.937,
-                                        'green': 0.937,
-                                        'blue': 0.937,
-                                        'alpha': 1,
-                                    },
-                                    'secondBandColor': {
-                                        'red': 1,
-                                        'green': 1,
-                                        'blue': 1,
-                                        'alpha': 1,
-                                    }
-                                }
+                    'addBanding': {
+                        'bandedRange': {
+                            'bandedRangeId': 3,
+                            'range': {
+                                'sheetId': sheet.properties.sheetId,
+                                'startRowIndex': 1,
+                                'endRowIndex': sheet.properties.gridProperties.rowCount,
+                                'startColumnIndex': 3,
+                                'endColumnIndex': sheet.properties.gridProperties.columnCount,
                             },
+                            columnProperties: {
+                                'firstBandColor': {
+                                    'red': 0.937,
+                                    'green': 0.937,
+                                    'blue': 0.937,
+                                    'alpha': 1,
+                                },
+                                'secondBandColor': {
+                                    'red': 1,
+                                    'green': 1,
+                                    'blue': 1,
+                                    'alpha': 1,
+                                }
+                            }
                         },
-                    }
-                ]
+                    },
+                } ]
             },
         });
         // console.log(res);
@@ -294,8 +293,33 @@ const updateRowSpreadsheet = async function (data, id) {
     }
 };
 
+const setNewUserEmptyData = async function(userName) {
+    try {
+        const current = await tryCreateNewSpreadSheet();
+        const {data: {values = []}} = await RowHandler.valuesCall('get', {range: `${current.title}!A2:Z1000`});
+        const userData = [];
+        utils.getWorkingDaysArray().forEach(day => {
+            userData.push([day, userName]);
+        });
+        const range = values.length || 2;
+        await RowHandler.valuesCall('batchUpdate', {
+            resource: {
+                valueInputOption: 'RAW',
+                data: [{
+                    range: `A${range}`,
+                    majorDimension: 'ROWS',
+                    values: userData,
+                }],
+            }
+        });
+    } catch (e) {
+        throw e;
+    }
+};
+
 module.exports = {
     getSheetsSuggestions,
     updateRowSpreadsheet,
     tryCreateNewSpreadSheet,
+    setNewUserEmptyData,
 };
