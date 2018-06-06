@@ -42,6 +42,7 @@ async function listen(controller) {
             if (isStarted) {
                 return;
             }
+            cronjobs.status();
             try {
                 const teams = await new Promise((resolve, reject) => {
                     controller.storage.teams.all((err, res) => {
