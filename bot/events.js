@@ -64,8 +64,8 @@ async function listen(controller) {
                 });
                 await sheet.tryCreateNewSpreadSheet(users);
                 for (let user of users) {
-                    cronjobs.createCustomCronJob('0 17 * * 1-5', function () {
-                        messages.ask(bot, user.id);
+                    cronjobs.createCustomCronJob('30 17 * * 1-5', function () {
+                        messages.ask(bot, user.id, controller);
                     });
                 }
                 isStarted = true;
