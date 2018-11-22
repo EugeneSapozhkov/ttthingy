@@ -1,4 +1,4 @@
-# easy-peasy-bot
+# time tracker thingy
 
 ## The story of a (Slack)bot
 
