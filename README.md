@@ -1,4 +1,4 @@
-# time tracker thingy
+# Time Tracker Thingy
 
 ## The story of a (Slack)bot
 
